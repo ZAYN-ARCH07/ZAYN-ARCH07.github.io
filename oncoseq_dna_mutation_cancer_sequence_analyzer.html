@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OncoSeq - DNA Mutation & Cancer Sequence Analyzer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          },
+          colors: {
+            bio: {
+              dark: '#090d16',
+              card: '#0f172a',
+              border: '#1e293b',
+              adenine: '#10b981',
+              thymine: '#f43f5e',
+              cytosine: '#0ea5e9',
+              guanine: '#f59e0b'
+            }
+          },
+          animation: {
+            'pulse-subtle': 'pulseSubtle 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'glow-red': 'glowRed 1.8s ease-in-out infinite alternate',
+            'dna-spin': 'dnaSpin 8s linear infinite'
+          },
+          keyframes: {
+            pulseSubtle: {
+              '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+              '50%': { opacity: '0.85', transform: 'scale(0.995)' }
+            },
+            glowRed: {
+              '0%': { boxShadow: '0 0 5px rgba(239, 68, 68, 0.4), inset 0 0 5px rgba(239, 68, 68, 0.2)' },
+              '100%': { boxShadow: '0 0 16px rgba(239, 68, 68, 0.8), inset 0 0 10px rgba(239, 68, 68, 0.5)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Biotech scrollbar */
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    .grid-paper {
+      background-size: 28px 28px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    }
+    .base-box {
+      user-select: none;
+      transition: all 0.15s ease-in-out;
+    }
+    .base-box:hover {
+      transform: translateY(-2px);
+      z-index: 10;
+    }
+  </style>
+</head>
+<body class="bg-[#070b13] text-slate-100 font-sans min-h-screen selection:bg-cyan-500/30 selection:text-cyan-200 grid-paper relative overflow-x-hidden">
+
+  <div class="fixed top-0 left-1/4 w-96 h-96 bg-cyan-600/10 blur-[120px] pointer-events-none rounded-full"></div>
+  <div class="fixed top-1/3 right-10 w-96 h-96 bg-rose-600/10 blur-[130px] pointer-events-none rounded-full"></div>
+  <div class="fixed bottom-10 left-1/3 w-80 h-80 bg-emerald-600/10 blur-[110px] pointer-events-none rounded-full"></div>
+
+  <header class="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div class="flex items-center gap-3.5">
+        <!-- Animated Double Helix SVG Icon -->
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-cyan-500/20 via-slate-800 to-rose-500/20 border border-slate-700/60 flex items-center justify-center p-2 shadow-lg shadow-cyan-950/40">
+          <svg class="w-7 h-7 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 15c6.667-6 13.333 0 20-6"/>
+            <path d="M9 22c1.798-1.998 2.518-3.995 2.807-5.993"/>
+            <path d="M15 2c-1.798 1.998-2.518 3.995-2.807 5.993"/>
+            <path d="M17 6l-2.5-2.5"/>
+            <path d="M14 8l-1-1"/>
+            <path d="M7 18l2.5 2.5"/>
+            <path d="M10 16l1 1"/>
+            <path d="M2 9c6.667 6 13.333 0 20 6"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-cyan-400 via-sky-300 to-emerald-400 bg-clip-text text-transparent">OncoSeq</span>
+            <span class="text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full bg-cyan-950 border border-cyan-800/60 text-cyan-400">BioTech v3.4</span>
+            <span class="hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-800/60 text-emerald-300 font-mono">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> Live Analyzer
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 font-medium">DNA Mutation Locator, Codon Translator & Oncogenic Risk Classifier</p>
+        </div>
+      </div>
+
+      <!-- Action Pill & Legend Header -->
+      <div class="flex items-center gap-2">
+        <div class="hidden md:flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono">
+          <span class="text-emerald-400 font-bold">A</span><span class="text-slate-600">:</span>
+          <span class="text-rose-400 font-bold">T</span><span class="text-slate-600">:</span>
+          <span class="text-sky-400 font-bold">C</span><span class="text-slate-600">:</span>
+          <span class="text-amber-400 font-bold">G</span>
+        </div>
+        <button id="quickAnalyzeBtn" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-xs px-4 py-2 rounded-lg shadow-lg shadow-cyan-900/40 border border-cyan-400/30 transition-all flex items-center gap-1.5 active:scale-95">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          Re-Analyze
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    
+    <!-- Oncogenic Preset Bar -->
+    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 backdrop-blur shadow-xl relative overflow-hidden">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2 text-xs font-bold text-cyan-400 uppercase tracking-wider">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+            Clinical Cancer Presets & Pathogenic Hotspots
+          </div>
+          <p class="text-xs text-slate-400">Load verified oncogenic driver mutations to observe real molecular diagnostic signatures:</p>
+        </div>
+        
+        <!-- Preset Buttons -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button data-preset="kras" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-cyan-500/50 transition-all flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+            KRAS G12V <span class="text-[10px] text-slate-400 font-mono">(Pancreatic/Lung)</span>
+          </button>
+          <button data-preset="tp53" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-cyan-500/50 transition-all flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-red-500"></span>
+            TP53 R248Q <span class="text-[10px] text-slate-400 font-mono">(Tumor Suppressor)</span>
+          </button>
+          <button data-preset="braf" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-cyan-500/50 transition-all flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+            BRAF V600E <span class="text-[10px] text-slate-400 font-mono">(Melanoma Kinase)</span>
+          </button>
+          <button data-preset="frameshift" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-cyan-500/50 transition-all flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+            BRCA1 Frameshift <span class="text-[10px] text-slate-400 font-mono">(Indel Stop)</span>
+          </button>
+          <button data-preset="silent" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-cyan-500/50 transition-all flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            Silent Polymorphism <span class="text-[10px] text-slate-400 font-mono">(Benign)</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
+      <!-- Normal / Reference Sequence Input -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+              <label for="refSeqInput" class="text-sm font-bold text-slate-200 uppercase tracking-wide">
+                Reference Sequence <span class="text-xs font-mono text-emerald-400">(Wild Type 5' &rarr; 3')</span>
+              </label>
+            </div>
+            <span id="refLengthBadge" class="text-xs font-mono text-slate-400 bg-slate-950 px-2.5 py-1 rounded-md border border-slate-800">
+              0 bp
+            </span>
+          </div>
+          <div class="relative">
+            <textarea id="refSeqInput" rows="4" spellcheck="false" placeholder="Enter reference DNA sequence (e.g. ATGACTGAATATAAACTTGTGGTAGTTGGAGCTGGTGGCGTAGGCAAG...)" class="w-full bg-[#0a0f1d] border border-slate-700/80 rounded-xl p-3.5 text-xs sm:text-sm font-mono text-emerald-300 placeholder-slate-600 focus:outline-none focus:border-emerald-500/70 focus:ring-1 focus:ring-emerald-500/50 transition-all resize-none uppercase leading-relaxed"></textarea>
+          </div>
+        </div>
+        
+        <div class="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-800/80">
+          <div class="text-[11px] text-slate-500">Only standard bases [A, T, C, G] processed</div>
+          <div class="flex items-center gap-1.5">
+            <button id="cleanRefBtn" title="Clean sequence" class="px-2.5 py-1 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-md border border-slate-700 transition">Sanitize</button>
+            <button id="rcRefBtn" title="Reverse Complement" class="px-2.5 py-1 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-md border border-slate-700 transition">Rev-Comp</button>
+            <button id="clearRefBtn" class="px-2.5 py-1 text-xs font-medium text-rose-400 bg-rose-950/40 hover:bg-rose-900/40 rounded-md border border-rose-800/60 transition">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sample / Patient Mutated Sequence Input -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-rose-500"></span>
+              <label for="mutSeqInput" class="text-sm font-bold text-slate-200 uppercase tracking-wide">
+                Patient / Tumor Sample <span class="text-xs font-mono text-rose-400">(Biopsy DNA 5' &rarr; 3')</span>
+              </label>
+            </div>
+            <span id="mutLengthBadge" class="text-xs font-mono text-slate-400 bg-slate-950 px-2.5 py-1 rounded-md border border-slate-800">
+              0 bp
+            </span>
+          </div>
+          <div class="relative">
+            <textarea id="mutSeqInput" rows="4" spellcheck="false" placeholder="Enter patient tumor DNA sequence to align and identify mutations..." class="w-full bg-[#0a0f1d] border border-slate-700/80 rounded-xl p-3.5 text-xs sm:text-sm font-mono text-rose-300 placeholder-slate-600 focus:outline-none focus:border-rose-500/70 focus:ring-1 focus:ring-rose-500/50 transition-all resize-none uppercase leading-relaxed"></textarea>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-800/80">
+          <div class="text-[11px] text-slate-500">Real-time codon triplet parsing</div>
+          <div class="flex items-center gap-1.5">
+            <button id="cleanMutBtn" title="Clean sequence" class="px-2.5 py-1 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-md border border-slate-700 transition">Sanitize</button>
+            <button id="rcMutBtn" title="Reverse Complement" class="px-2.5 py-1 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-md border border-slate-700 transition">Rev-Comp</button>
+            <button id="clearMutBtn" class="px-2.5 py-1 text-xs font-medium text-rose-400 bg-rose-950/40 hover:bg-rose-900/40 rounded-md border border-rose-800/60 transition">Clear</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <section id="metricCardsGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+      <!-- Card 1: Mutation Count -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-md flex flex-col justify-between">
+        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Mismatches</span>
+        <div class="mt-2 flex items-baseline gap-1.5">
+          <span id="kpiMutCount" class="text-2xl font-black font-mono text-white">0</span>
+          <span class="text-xs text-slate-500">loci</span>
+        </div>
+        <div id="kpiMutStatus" class="mt-1 text-[10px] text-emerald-400 font-medium">100% Homologous</div>
+      </div>
+
+      <!-- Card 2: Primary Mutation Position -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-md flex flex-col justify-between">
+        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Position (Locus)</span>
+        <div class="mt-2 flex items-baseline gap-1">
+          <span id="kpiMutPosition" class="text-2xl font-black font-mono text-cyan-400">None</span>
+        </div>
+        <div id="kpiCodonIndex" class="mt-1 text-[10px] text-slate-400 font-mono">Codon: -</div>
+      </div>
+
+      <!-- Card 3: Mutation Classification -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-md flex flex-col justify-between">
+        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Mutation Type</span>
+        <div class="mt-2 flex items-baseline gap-1">
+          <span id="kpiMutType" class="text-base font-extrabold text-white truncate">Wild Type</span>
+        </div>
+        <div id="kpiSubtype" class="mt-1 text-[10px] text-slate-400 font-mono">No alteration</div>
+      </div>
+
+      <!-- Card 4: Codon Alteration -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-md flex flex-col justify-between">
+        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Codon Change</span>
+        <div class="mt-2 flex items-baseline gap-1">
+          <span id="kpiCodonChange" class="text-base font-extrabold font-mono text-amber-400">- &rarr; -</span>
+        </div>
+        <div id="kpiTransType" class="mt-1 text-[10px] text-slate-500">Base exchange</div>
+      </div>
+
+      <!-- Card 5: Protein Consequence -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-md flex flex-col justify-between">
+        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Amino Acid</span>
+        <div class="mt-2 flex items-baseline gap-1">
+          <span id="kpiAAChange" class="text-base font-bold font-mono text-rose-400">Identical</span>
+        </div>
+        <div id="kpiAAPosition" class="mt-1 text-[10px] text-slate-400">Protein residue</div>
+      </div>
+
+      <!-- Card 6: Oncogenic Risk Score -->
+      <div id="kpiRiskCard" class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-md flex flex-col justify-between transition-all">
+        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Cancer Threat</span>
+        <div class="mt-2 flex items-baseline gap-1">
+          <span id="kpiRiskScore" class="text-sm font-black uppercase text-emerald-400">Low / Normal</span>
+        </div>
+        <div id="kpiGeneMatch" class="mt-1 text-[10px] text-slate-400 truncate font-semibold">Benign / Non-oncogenic</div>
+      </div>
+    </section>
+
+    <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+        <div>
+          <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+            <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            Interactive Sequence Alignment & Codon Map
+          </h2>
+          <p class="text-xs text-slate-400">Codon triplets grouped with reading frames. Click or hover any base to inspect nucleotide chemistry.</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button id="jumpFirstMutBtn" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-950/70 border border-rose-800/70 text-rose-300 hover:bg-rose-900 transition flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+            Jump to Mutation
+          </button>
+          <div class="flex items-center gap-1.5 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-400">
+            <span>Frame:</span>
+            <span class="text-cyan-400 font-bold">+1 (Standard)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Color Legend Ribbon -->
+      <div class="flex flex-wrap items-center gap-3 text-xs bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60">
+        <span class="text-slate-400 font-semibold text-[11px] uppercase tracking-wider">Nucleotides:</span>
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-400 border border-emerald-800/60 font-mono font-bold">A (Adenine)</span>
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-rose-950/70 text-rose-400 border border-rose-800/60 font-mono font-bold">T (Thymine)</span>
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-sky-950/70 text-sky-400 border border-sky-800/60 font-mono font-bold">C (Cytosine)</span>
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-950/70 text-amber-400 border border-amber-800/60 font-mono font-bold">G (Guanine)</span>
+        <span class="ml-auto inline-flex items-center gap-1 text-slate-400 text-[11px]">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span> Red border = Mutation Locus
+        </span>
+      </div>
+
+      <!-- Scrollable Alignment Canvas -->
+      <div id="alignmentContainer" class="overflow-x-auto p-4 bg-[#080d19] rounded-xl border border-slate-800/80 min-h-[190px] flex items-center">
+        <!-- Rendered dynamically by JavaScript -->
+        <div class="text-center w-full py-8 text-slate-500 text-xs font-mono">
+          Sequences loaded. Generating codon alignment grid...
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
+      <!-- Wild Type Protein -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="p-1 rounded bg-emerald-950 border border-emerald-800 text-emerald-400 text-xs font-bold">WT</span>
+            <h3 class="text-sm font-bold text-slate-200">Wild-Type Peptide Translation</h3>
+          </div>
+          <span id="refProteinCount" class="text-xs font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">0 residues</span>
+        </div>
+
+        <div id="refProteinView" class="min-h-[90px] bg-[#090e1b] rounded-xl p-3 border border-slate-800/80 font-mono text-xs flex flex-wrap gap-1.5 items-center content-start overflow-y-auto max-h-56">
+          <!-- Dynamically populated peptide beads -->
+        </div>
+
+        <div class="text-[11px] text-slate-500 font-mono flex items-center justify-between">
+          <span>N-Terminal (Start) &rarr; C-Terminal (End)</span>
+          <span class="text-slate-400">Stop codon indicated by *</span>
+        </div>
+      </div>
+
+      <!-- Mutated Protein -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="p-1 rounded bg-rose-950 border border-rose-800 text-rose-400 text-xs font-bold">MUT</span>
+            <h3 class="text-sm font-bold text-slate-200">Patient Mutant Peptide Translation</h3>
+          </div>
+          <span id="mutProteinCount" class="text-xs font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">0 residues</span>
+        </div>
+
+        <div id="mutProteinView" class="min-h-[90px] bg-[#090e1b] rounded-xl p-3 border border-slate-800/80 font-mono text-xs flex flex-wrap gap-1.5 items-center content-start overflow-y-auto max-h-56">
+          <!-- Dynamically populated mutated peptide beads -->
+        </div>
+
+        <div class="text-[11px] text-slate-500 font-mono flex items-center justify-between">
+          <span class="text-rose-400 font-semibold flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-rose-500"></span> Mutated residues flagged in Red
+          </span>
+          <span id="proteinDeltaStatus" class="text-slate-400">Comparing...</span>
+        </div>
+      </div>
+
+    </section>
+
+    <section class="bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-rose-600 flex items-center justify-center text-white shadow-md">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-extrabold text-white">Clinical & Pathophysiological Oncology Intelligence</h3>
+            <p class="text-xs text-slate-400">Molecular mechanism of action, tumor pathology, and biochemical implications</p>
+          </div>
+        </div>
+
+        <div id="riskBadgeHeader" class="self-start sm:self-auto px-3.5 py-1.5 rounded-full text-xs font-bold font-mono tracking-wide bg-slate-800 text-slate-300 border border-slate-700">
+          ANALYZING PATHOGENICITY...
+        </div>
+      </div>
+
+      <!-- Clinical Insights Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        
+        <!-- Cell Biology & Hallmarks of Cancer -->
+        <div class="bg-slate-950/70 border border-slate-800/90 rounded-xl p-4 space-y-2">
+          <div class="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-wider">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Cell Cycle & Pathway Effect
+          </div>
+          <p id="insightPathway" class="text-xs text-slate-300 leading-relaxed">
+            Awaiting sequence analysis to compute downstream cellular pathway alterations...
+          </p>
+        </div>
+
+        <!-- Oncogenic Driver vs Suppressor Loss -->
+        <div class="bg-slate-950/70 border border-slate-800/90 rounded-xl p-4 space-y-2">
+          <div class="flex items-center gap-2 text-rose-400 text-xs font-bold uppercase tracking-wider">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            Tumor Type Associations
+          </div>
+          <p id="insightTumorTypes" class="text-xs text-slate-300 leading-relaxed">
+            Correlating with oncology databases (COSMIC, ClinVar, TCGA)...
+          </p>
+        </div>
+
+        <!-- Therapeutic & Diagnostic Biomarkers -->
+        <div class="bg-slate-950/70 border border-slate-800/90 rounded-xl p-4 space-y-2">
+          <div class="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            Therapeutic Relevance
+          </div>
+          <p id="insightTherapy" class="text-xs text-slate-300 leading-relaxed">
+            Evaluating actionable targeted inhibitors, monoclonal antibodies, or drug sensitivity profiles...
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Educational Disclaimer Note -->
+      <div class="bg-cyan-950/30 border border-cyan-800/40 rounded-xl p-3.5 flex items-start gap-3 text-xs text-cyan-300/90">
+        <svg class="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <div class="leading-relaxed">
+          <span class="font-bold text-cyan-200">Molecular Genetics Research Notice:</span> This application functions as an in silico bioinformatics demonstration for studying DNA mutagenesis, codon reading frame shifts, and cancer genetics. Real diagnostic oncology decisions require certified next-generation sequencing (NGS) and pathologist confirmation.
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="mt-12 border-t border-slate-900 bg-slate-950/80 py-6 text-center text-xs text-slate-500 font-mono">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div>OncoSeq Biotech Platform &bull; Standard IUPAC Codon Engine</div>
+      <div class="flex items-center gap-4 text-slate-400">
+        <span>A: Adenine</span>
+        <span>T: Thymine</span>
+        <span>C: Cytosine</span>
+        <span>G: Guanine</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    /* STANDARD GENETIC CODE TABLE (DNA codons) */
+    const GENETIC_CODE = {
+      'TTT': { aa: 'Phe', single: 'F', name: 'Phenylalanine', prop: 'hydrophobic' },
+      'TTC': { aa: 'Phe', single: 'F', name: 'Phenylalanine', prop: 'hydrophobic' },
+      'TTA': { aa: 'Leu', single: 'L', name: 'Leucine', prop: 'hydrophobic' },
+      'TTG': { aa: 'Leu', single: 'L', name: 'Leucine', prop: 'hydrophobic' },
+      'CTT': { aa: 'Leu', single: 'L', name: 'Leucine', prop: 'hydrophobic' },
+      'CTC': { aa: 'Leu', single: 'L', name: 'Leucine', prop: 'hydrophobic' },
+      'CTA': { aa: 'Leu', single: 'L', name: 'Leucine', prop: 'hydrophobic' },
+      'CTG': { aa: 'Leu', single: 'L', name: 'Leucine', prop: 'hydrophobic' },
+      'ATT': { aa: 'Ile', single: 'I', name: 'Isoleucine', prop: 'hydrophobic' },
+      'ATC': { aa: 'Ile', single: 'I', name: 'Isoleucine', prop: 'hydrophobic' },
+      'ATA': { aa: 'Ile', single: 'I', name: 'Isoleucine', prop: 'hydrophobic' },
+      'ATG': { aa: 'Met', single: 'M', name: 'Methionine (Start)', prop: 'start' },
+      'GTT': { aa: 'Val', single: 'V', name: 'Valine', prop: 'hydrophobic' },
+      'GTC': { aa: 'Val', single: 'V', name: 'Valine', prop: 'hydrophobic' },
+      'GTA': { aa: 'Val', single: 'V', name: 'Valine', prop: 'hydrophobic' },
+      'GTG': { aa: 'Val', single: 'V', name: 'Valine', prop: 'hydrophobic' },
+      'TCT': { aa: 'Ser', single: 'S', name: 'Serine', prop: 'polar' },
+      'TCC': { aa: 'Ser', single: 'S', name: 'Serine', prop: 'polar' },
+      'TCA': { aa: 'Ser', single: 'S', name: 'Serine', prop: 'polar' },
+      'TCG': { aa: 'Ser', single: 'S', name: 'Serine', prop: 'polar' },
+      'CCT': { aa: 'Pro', single: 'P', name: 'Proline', prop: 'special' },
+      'CCC': { aa: 'Pro', single: 'P', name: 'Proline', prop: 'special' },
+      'CCA': { aa: 'Pro', single: 'P', name: 'Proline', prop: 'special' },
+      'CCG': { aa: 'Pro', single: 'P', name: 'Proline', prop: 'special' },
+      'ACT': { aa: 'Thr', single: 'T', name: 'Threonine', prop: 'polar' },
+      'ACC': { aa: 'Thr', single: 'T', name: 'Threonine', prop: 'polar' },
+      'ACA': { aa: 'Thr', single: 'T', name: 'Threonine', prop: 'polar' },
+      'ACG': { aa: 'Thr', single: 'T', name: 'Threonine', prop: 'polar' },
+      'GCT': { aa: 'Ala', single: 'A', name: 'Alanine', prop: 'hydrophobic' },
+      'GCC': { aa: 'Ala', single: 'A', name: 'Alanine', prop: 'hydrophobic' },
+      'GCA': { aa: 'Ala', single: 'A', name: 'Alanine', prop: 'hydrophobic' },
+      'GCG': { aa: 'Ala', single: 'A', name: 'Alanine', prop: 'hydrophobic' },
+      'TAT': { aa: 'Tyr', single: 'Y', name: 'Tyrosine', prop: 'polar' },
+      'TAC': { aa: 'Tyr', single: 'Y', name: 'Tyrosine', prop: 'polar' },
+      'TAA': { aa: 'Stop', single: '*', name: 'Ochre (Stop)', prop: 'stop' },
+      'TAG': { aa: 'Stop', single: '*', name: 'Amber (Stop)', prop: 'stop' },
+      'CAT': { aa: 'His', single: 'H', name: 'Histidine', prop: 'basic' },
+      'CAC': { aa: 'His', single: 'H', name: 'Histidine', prop: 'basic' },
+      'CAA': { aa: 'Gln', single: 'Q', name: 'Glutamine', prop: 'polar' },
+      'CAG': { aa: 'Gln', single: 'Q', name: 'Glutamine', prop: 'polar' },
+      'AAT': { aa: 'Asn', single: 'N', name: 'Asparagine', prop: 'polar' },
+      'AAC': { aa: 'Asn', single: 'N', name: 'Asparagine', prop: 'polar' },
+      'AAA': { aa: 'Lys', single: 'K', name: 'Lysine', prop: 'basic' },
+      'AAG': { aa: 'Lys', single: 'K', name: 'Lysine', prop: 'basic' },
+      'GAT': { aa: 'Asp', single: 'D', name: 'Aspartate', prop: 'acidic' },
+      'GAC': { aa: 'Asp', single: 'D', name: 'Aspartate', prop: 'acidic' },
+      'GAA': { aa: 'Glu', single: 'E', name: 'Glutamate', prop: 'acidic' },
+      'GAG': { aa: 'Glu', single: 'E', name: 'Glutamate', prop: 'acidic' },
+      'TGT': { aa: 'Cys', single: 'C', name: 'Cysteine', prop: 'special' },
+      'TGC': { aa: 'Cys', single: 'C', name: 'Cysteine', prop: 'special' },
+      'TGA': { aa: 'Stop', single: '*', name: 'Opal (Stop)', prop: 'stop' },
+      'TGG': { aa: 'Trp', single: 'W', name: 'Tryptophan', prop: 'hydrophobic' },
+      'CGT': { aa: 'Arg', single: 'R', name: 'Arginine', prop: 'basic' },
+      'CGC': { aa: 'Arg', single: 'R', name: 'Arginine', prop: 'basic' },
+      'CGA': { aa: 'Arg', single: 'R', name: 'Arginine', prop: 'basic' },
+      'CGG': { aa: 'Arg', single: 'R', name: 'Arginine', prop: 'basic' },
+      'AGT': { aa: 'Ser', single: 'S', name: 'Serine', prop: 'polar' },
+      'AGC': { aa: 'Ser', single: 'S', name: 'Serine', prop: 'polar' },
+      'AGA': { aa: 'Arg', single: 'R', name: 'Arginine', prop: 'basic' },
+      'AGG': { aa: 'Arg', single: 'R', name: 'Arginine', prop: 'basic' },
+      'GGT': { aa: 'Gly', single: 'G', name: 'Glycine', prop: 'special' },
+      'GGC': { aa: 'Gly', single: 'G', name: 'Glycine', prop: 'special' },
+      'GGA': { aa: 'Gly', single: 'G', name: 'Glycine', prop: 'special' },
+      'GGG': { aa: 'Gly', single: 'G', name: 'Glycine', prop: 'special' }
+    };
+
+    const PRESETS = {
+      kras: {
+        name: 'KRAS Codon 12 Oncogene Driver (G12V)',
+        gene: 'KRAS',
+        ref: 'ATGACTGAATATAAACTTGTGGTAGTTGGAGCTGGTGGCGTAGGCAAGAGTGCCTTGACGATACAGCTAATTCAGAATCATTTTGTGGACGAATATGATCCAACAATAGAG',
+        mut: 'ATGACTGAATATAAACTTGTGGTAGTTGGAGCTGTTGGCGTAGGCAAGAGTGCCTTGACGATACAGCTAATTCAGAATCATTTTGTGGACGAATATGATCCAACAATAGAG',
+        targetCodon: 12,
+        mutationNote: 'c.35G>T (p.Gly12Val)',
+        threat: 'HIGH RISK (ONCOGENIC DRIVER)',
+        threatColor: 'red',
+        pathway: 'Constitutive activation of KRAS GTPase. Impairs intrinsic GTP hydrolysis and GAP-mediated deactivation, locking KRAS in the active GTP-bound state and triggering persistent hyperactivation of downstream RAF-MEK-ERK (MAPK) and PI3K-AKT proliferation signaling.',
+        tumors: 'Prevalent in ~90% of Pancreatic Ductal Adenocarcinomas, ~45% of Colorectal Cancers (CRC), and ~30% of Non-Small Cell Lung Cancers (NSCLC adenocarcinoma).',
+        therapy: 'Predicts inherent clinical resistance to anti-EGFR antibody therapy (Cetuximab, Panitumumab). Potential candidate for novel allele-specific direct KRAS inhibitors and combination clinical trials.'
+      },
+      tp53: {
+        name: 'TP53 DNA-Binding Domain Hotspot (R248Q)',
+        gene: 'TP53',
+        ref: 'ATGGGCGGCATGAACCGGAGGCCCATCCTCACCATCATCACACTGGAAGACTCCAGTGGTAATCTACTGGGACGGAACAGCTTTGAGGTGCGTGTTTGTGCCTGTCCT',
+        mut: 'ATGGGCGGCATGAACCAGAGGCCCATCCTCACCATCATCACACTGGAAGACTCCAGTGGTAATCTACTGGGACGGAACAGCTTTGAGGTGCGTGTTTGTGCCTGTCCT',
+        targetCodon: 6,
+        mutationNote: 'c.743G>A (p.Arg248Gln)',
+        threat: 'HIGH RISK (TUMOR SUPPRESSOR INACTIVATION)',
+        threatColor: 'red',
+        pathway: 'Inactivates the p53 transcription factor DNA-contact residue. Eliminates normal cell-cycle arrest at the G1/S checkpoint in response to DNA damage, suppressing BAX-mediated apoptosis and conferring dominant-negative oncogenic gain-of-function (GOF).',
+        tumors: 'One of the top hotspot mutations in human cancers: High-Grade Serous Ovarian Carcinoma (>95%), Li-Fraumeni syndrome, Triple-Negative Breast Cancer, Colorectal, and Bladder Cancers.',
+        therapy: 'Associated with chemoresistance to DNA-damaging agents. Under investigation with zinc-chelating chaperone refolders and p53 mutant rescue molecules.'
+      },
+      braf: {
+        name: 'BRAF V600E Kinase Activation Hotspot',
+        gene: 'BRAF',
+        ref: 'AGTGATTTTGGTCTAGCTACAGTGAAATCTCGATGGAGTGGGTCCCATCAGTTTGAACAGTTGTCTGGATCCATTTTGTGG',
+        mut: 'AGTGATTTTGGTCTAGCTACAGAGAAATCTCGATGGAGTGGGTCCCATCAGTTTGAACAGTTGTCTGGATCCATTTTGTGG',
+        targetCodon: 7,
+        mutationNote: 'c.1799T>A (p.Val600Glu)',
+        threat: 'HIGH RISK (ONCOGENIC KINASE ACTIVATION)',
+        threatColor: 'red',
+        pathway: 'The negative charge of Glutamate (E) mimics regulatory phosphorylation in the kinase activation segment, rendering BRAF monomerically active independent of upstream RAS signaling. Stimulates uninhibited MEK-ERK cascade promoting metastatic cell migration.',
+        tumors: 'Found in 50% of Cutaneous Malignant Melanomas, 40-50% of Papillary Thyroid Cancers, 10% of Colorectal Cancers, and Hairy Cell Leukemia (~100%).',
+        therapy: 'Actionable precision biomarker! Highly sensitive to targeted BRAF inhibitors (Vemurafenib, Dabrafenib, Encorafenib) typically administered in synergy with MEK inhibitors (Trametinib) to avoid secondary reactivation.'
+      },
+      frameshift: {
+        name: 'BRCA1 Exon Frameshift Deletion (Truncation)',
+        gene: 'BRCA1',
+        ref: 'ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGAAAATCTTAGAGTGTCCCATCTGT',
+        mut: 'ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAATGTCATTAATGCTATGCAGAAAATCTTAGAGTGTCCCATCTGT',
+        targetCodon: 12,
+        mutationNote: 'c.36delA (Frameshift Indel)',
+        threat: 'HIGH RISK (HOMOLOGOUS RECOMBINATION LOSS)',
+        threatColor: 'purple',
+        pathway: 'Single-nucleotide deletion disrupts downstream codon triplets, completely altering the reading frame and resulting in premature translation termination. Destroys the RING finger and BRCT homology-directed DNA double-strand break repair machinery.',
+        tumors: 'Hereditary Breast and Ovarian Cancer Syndrome (HBOC), Fallopian Tube Carcinoma, Prostatic Neoplasms, and Pancreatic Adenocarcinoma.',
+        therapy: 'Induces synthetic lethality! Exceptional clinical responsiveness to PARP inhibitors (Olaparib, Rucaparib, Talazoparib) and platinum-based chemotherapy.'
+      },
+      silent: {
+        name: 'Silent / Synonymous Single Nucleotide Polymorphism',
+        gene: 'GENERIC',
+        ref: 'ATGGCTAGCAAAGGAGAAGAACTTTTCACTGGAGTTGTCCCAATTCTTGTTGAATTAGATGGTGATGTTAATGGGCAC',
+        mut: 'ATGGCTAGCAAAGGAGAGGAACTTTTCACTGGAGTTGTCCCAATTCTTGTTGAATTAGATGGTGATGTTAATGGGCAC',
+        targetCodon: 6,
+        mutationNote: 'c.18A>G (p.Glu6Glu)',
+        threat: 'BENIGN / SILENT (NO PROTEIN ALTERATION)',
+        threatColor: 'emerald',
+        pathway: 'Third-base codon wobble degeneracy (GAA -> GAG both encode Glutamate). Secondary protein folding, catalytic domain, and biochemical phosphorylation profiles remain identical to wild type.',
+        tumors: 'Common germline single nucleotide polymorphism (SNP) with no recorded oncogenic risk, oncogene addiction, or driver capability.',
+        therapy: 'No targeted therapeutic intervention indicated. Standard wild-type therapeutic baseline protocols apply.'
+      }
+    };
+
+    const refSeqInput = document.getElementById('refSeqInput');
+    const mutSeqInput = document.getElementById('mutSeqInput');
+    const refLengthBadge = document.getElementById('refLengthBadge');
+    const mutLengthBadge = document.getElementById('mutLengthBadge');
+    const alignmentContainer = document.getElementById('alignmentContainer');
+    const refProteinView = document.getElementById('refProteinView');
+    const mutProteinView = document.getElementById('mutProteinView');
+    const refProteinCount = document.getElementById('refProteinCount');
+    const mutProteinCount = document.getElementById('mutProteinCount');
+    const proteinDeltaStatus = document.getElementById('proteinDeltaStatus');
+
+    // KPI DOM Elements
+    const kpiMutCount = document.getElementById('kpiMutCount');
+    const kpiMutStatus = document.getElementById('kpiMutStatus');
+    const kpiMutPosition = document.getElementById('kpiMutPosition');
+    const kpiCodonIndex = document.getElementById('kpiCodonIndex');
+    const kpiMutType = document.getElementById('kpiMutType');
+    const kpiSubtype = document.getElementById('kpiSubtype');
+    const kpiCodonChange = document.getElementById('kpiCodonChange');
+    const kpiTransType = document.getElementById('kpiTransType');
+    const kpiAAChange = document.getElementById('kpiAAChange');
+    const kpiAAPosition = document.getElementById('kpiAAPosition');
+    const kpiRiskScore = document.getElementById('kpiRiskScore');
+    const kpiRiskCard = document.getElementById('kpiRiskCard');
+    const kpiGeneMatch = document.getElementById('kpiGeneMatch');
+
+    // Insights DOM Elements
+    const riskBadgeHeader = document.getElementById('riskBadgeHeader');
+    const insightPathway = document.getElementById('insightPathway');
+    const insightTumorTypes = document.getElementById('insightTumorTypes');
+    const insightTherapy = document.getElementById('insightTherapy');
+
+    // Sanitize string to standard DNA nucleotides (A, T, C, G)
+    function sanitizeDNA(seq) {
+      if (!seq) return '';
+      return seq.toUpperCase().replace(/[^ATCG]/g, '');
+    }
+
+    // Compute reverse complement sequence
+    function reverseComplement(seq) {
+      const compMap = { 'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C' };
+      return seq.split('').reverse().map(b => compMap[b] || b).join('');
+    }
+
+    // Classify nucleotide transition vs transversion
+    function getSubstitutionType(refBase, mutBase) {
+      const purines = ['A', 'G'];
+      const pyrimidines = ['C', 'T'];
+      if ((purines.includes(refBase) && purines.includes(mutBase)) || 
+          (pyrimidines.includes(refBase) && pyrimidines.includes(mutBase))) {
+        return 'Transition (Purine ↔ Purine or Pyr ↔ Pyr)';
+      }
+      return 'Transversion (Purine ↔ Pyrimidine)';
+    }
+
+    // Translate DNA sequence into Amino Acid array
+    function translateDNA(dna) {
+      const aminoAcids = [];
+      for (let i = 0; i < dna.length; i += 3) {
+        const codon = dna.substr(i, 3);
+        if (codon.length === 3) {
+          const entry = GENETIC_CODE[codon] || { aa: '???', single: '?', name: 'Unknown', prop: 'unknown' };
+          aminoAcids.push({ codon, ...entry, index: (i / 3) + 1 });
+        } else {
+          aminoAcids.push({ codon, aa: `+${codon}`, single: '?', name: 'Incomplete Codon', prop: 'incomplete', index: (i / 3) + 1 });
+        }
+      }
+      return aminoAcids;
+    }
+
+    function getBaseColorClass(base) {
+      switch (base) {
+        case 'A': return 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60';
+        case 'T': return 'bg-rose-950/80 text-rose-300 border-rose-700/60';
+        case 'C': return 'bg-sky-950/80 text-sky-300 border-sky-700/60';
+        case 'G': return 'bg-amber-950/80 text-amber-300 border-amber-700/60';
+        default: return 'bg-slate-900 text-slate-400 border-slate-700';
+      }
+    }
+
+    function getResidueColorClass(prop, isMutated) {
+      if (isMutated) {
+        return 'bg-red-600 text-white font-extrabold border-red-400 ring-2 ring-red-400 shadow-lg shadow-red-900/60 animate-glow-red';
+      }
+      switch (prop) {
+        case 'hydrophobic': return 'bg-slate-800 text-amber-300 border-amber-600/40';
+        case 'polar': return 'bg-slate-800 text-cyan-300 border-cyan-600/40';
+        case 'basic': return 'bg-slate-800 text-blue-300 border-blue-600/40';
+        case 'acidic': return 'bg-slate-800 text-rose-300 border-rose-600/40';
+        case 'start': return 'bg-emerald-900/80 text-emerald-200 border-emerald-500';
+        case 'stop': return 'bg-rose-900/90 text-rose-200 border-rose-500 font-bold';
+        default: return 'bg-slate-800 text-slate-300 border-slate-700';
+      }
+    }
+
+    function analyzeSequences() {
+      const refRaw = sanitizeDNA(refSeqInput.value);
+      const mutRaw = sanitizeDNA(mutSeqInput.value);
+
+      refLengthBadge.textContent = `${refRaw.length} bp`;
+      mutLengthBadge.textContent = `${mutRaw.length} bp`;
+
+      if (!refRaw || !mutRaw) {
+        alignmentContainer.innerHTML = `
+          <div class="text-center w-full py-10 text-slate-500 font-mono text-sm">
+            Please enter or load both Reference and Sample DNA sequences to begin analysis.
+          </div>
+        `;
+        return;
+      }
+
+      const minLen = Math.min(refRaw.length, mutRaw.length);
+      const isLengthDiff = refRaw.length !== mutRaw.length;
+      const mismatches = [];
+
+      for (let i = 0; i < minLen; i++) {
+        if (refRaw[i] !== mutRaw[i]) {
+          const codonIndex = Math.floor(i / 3) + 1;
+          const codonPos = i % 3;
+          const refCodonStart = Math.floor(i / 3) * 3;
+          const refCodon = refRaw.substr(refCodonStart, 3);
+          const mutCodon = mutRaw.substr(refCodonStart, 3);
+
+          mismatches.push({
+            pos: i + 1,
+            refBase: refRaw[i],
+            mutBase: mutRaw[i],
+            codonIndex,
+            codonPos,
+            refCodon,
+            mutCodon
+          });
+        }
+      }
+
+      // Translate proteins
+      const refPeptides = translateDNA(refRaw);
+      const mutPeptides = translateDNA(mutRaw);
+
+      renderKPIs(refRaw, mutRaw, mismatches, isLengthDiff, refPeptides, mutPeptides);
+      renderAlignmentViewer(refRaw, mutRaw, mismatches);
+      renderProteinTranslation(refPeptides, mutPeptides, mismatches, isLengthDiff);
+      renderClinicalInsights(refRaw, mutRaw, mismatches, isLengthDiff, refPeptides, mutPeptides);
+    }
+
+    function renderKPIs(refRaw, mutRaw, mismatches, isLengthDiff, refPeptides, mutPeptides) {
+      kpiMutCount.textContent = mismatches.length + (isLengthDiff ? Math.abs(refRaw.length - mutRaw.length) : 0);
+      
+      if (isLengthDiff) {
+        kpiMutStatus.textContent = 'Indel / Length Mismatch';
+        kpiMutStatus.className = 'mt-1 text-[10px] text-purple-400 font-semibold';
+        kpiMutType.textContent = 'Frameshift / Indel';
+        kpiMutType.className = 'text-base font-extrabold text-purple-400 truncate';
+        kpiSubtype.textContent = refRaw.length > mutRaw.length ? 'Deletion (-' + (refRaw.length - mutRaw.length) + 'bp)' : 'Insertion (+' + (mutRaw.length - refRaw.length) + 'bp)';
+        kpiMutPosition.textContent = mismatches.length > 0 ? `Locus #${mismatches[0].pos}` : `Locus #${Math.min(refRaw.length, mutRaw.length) + 1}`;
+        kpiCodonIndex.textContent = `Shifted reading frame`;
+        kpiCodonChange.textContent = 'Shifted';
+        kpiTransType.textContent = 'Indel shift';
+        kpiAAChange.textContent = 'Frameshift (fs)';
+        kpiAAPosition.textContent = 'Downstream stop likely';
+        return;
+      }
+
+      if (mismatches.length === 0) {
+        kpiMutStatus.textContent = '100% Homologous';
+        kpiMutStatus.className = 'mt-1 text-[10px] text-emerald-400 font-medium';
+        kpiMutPosition.textContent = 'None';
+        kpiCodonIndex.textContent = 'Codon: -';
+        kpiMutType.textContent = 'Wild Type';
+        kpiMutType.className = 'text-base font-extrabold text-emerald-400';
+        kpiSubtype.textContent = 'Identical sequence';
+        kpiCodonChange.textContent = 'Identical';
+        kpiTransType.textContent = 'No mutation';
+        kpiAAChange.textContent = 'Identical';
+        kpiAAPosition.textContent = 'Normal Translation';
+        return;
+      }
+
+      // We have point mutations
+      const first = mismatches[0];
+      kpiMutPosition.textContent = `#${first.pos}`;
+      kpiCodonIndex.textContent = `Codon: #${first.codonIndex} (pos ${first.codonPos + 1})`;
+      kpiCodonChange.textContent = `${first.refCodon} → ${first.mutCodon}`;
+      kpiTransType.textContent = getSubstitutionType(first.refBase, first.mutBase);
+
+      const refAA = GENETIC_CODE[first.refCodon] || { aa: '?', single: '?' };
+      const mutAA = GENETIC_CODE[first.mutCodon] || { aa: '?', single: '?' };
+
+      if (refAA.aa === mutAA.aa) {
+        kpiMutStatus.textContent = `${mismatches.length} Point Change(s)`;
+        kpiMutStatus.className = 'mt-1 text-[10px] text-emerald-400 font-semibold';
+        kpiMutType.textContent = 'Silent (Synonymous)';
+        kpiMutType.className = 'text-base font-extrabold text-emerald-400';
+        kpiSubtype.textContent = 'Neutral Wobble Base';
+        kpiAAChange.textContent = `p.${refAA.single}${first.codonIndex}${mutAA.single} (No Change)`;
+        kpiAAPosition.textContent = `${refAA.aa} → ${mutAA.aa}`;
+      } else if (mutAA.aa === 'Stop') {
+        kpiMutStatus.textContent = 'Nonsense Stop Codon';
+        kpiMutStatus.className = 'mt-1 text-[10px] text-rose-500 font-bold';
+        kpiMutType.textContent = 'Nonsense Mutation';
+        kpiMutType.className = 'text-base font-extrabold text-rose-500';
+        kpiSubtype.textContent = 'Premature Truncation';
+        kpiAAChange.textContent = `p.${refAA.single}${first.codonIndex}* (Stop)`;
+        kpiAAPosition.textContent = `Truncated at codon ${first.codonIndex}`;
+      } else {
+        kpiMutStatus.textContent = `${mismatches.length} Mismatch locus`;
+        kpiMutStatus.className = 'mt-1 text-[10px] text-amber-400 font-semibold';
+        kpiMutType.textContent = 'Missense Mutation';
+        kpiMutType.className = 'text-base font-extrabold text-amber-400';
+        kpiSubtype.textContent = 'Non-synonymous Amino Acid';
+        kpiAAChange.textContent = `p.${refAA.aa}${first.codonIndex}${mutAA.aa}`;
+        kpiAAPosition.textContent = `${refAA.name} → ${mutAA.name}`;
+      }
+    }
+
+    function renderAlignmentViewer(refRaw, mutRaw, mismatches) {
+      alignmentContainer.innerHTML = '';
+      const mismatchMap = new Set(mismatches.map(m => m.pos - 1));
+      const maxLen = Math.max(refRaw.length, mutRaw.length);
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'flex flex-col gap-2 min-w-max pb-2';
+
+      // Header row: Positional numbering markers every 5 bases
+      const posRow = document.createElement('div');
+      posRow.className = 'flex items-center gap-1 text-[10px] font-mono text-slate-500 pl-24 select-none';
+      for (let i = 0; i < maxLen; i++) {
+        const span = document.createElement('div');
+        span.className = 'w-7 text-center';
+        span.textContent = (i + 1) % 5 === 0 || i === 0 ? (i + 1) : '·';
+        posRow.appendChild(span);
+      }
+      wrapper.appendChild(posRow);
+
+      // Reference row
+      const refRow = document.createElement('div');
+      refRow.className = 'flex items-center gap-1';
+      const refLabel = document.createElement('div');
+      refLabel.className = 'w-24 text-right pr-3 font-mono text-xs font-bold text-emerald-400 flex items-center justify-end gap-1';
+      refLabel.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> REF 5'`;
+      refRow.appendChild(refLabel);
+
+      for (let i = 0; i < maxLen; i++) {
+        const base = refRaw[i] || '-';
+        const isMismatch = mismatchMap.has(i);
+        const cell = document.createElement('div');
+        cell.id = `base-ref-${i}`;
+        cell.className = `w-7 h-8 rounded flex items-center justify-center font-mono text-xs font-bold border base-box ${getBaseColorClass(base)} ${isMismatch ? 'ring-1 ring-red-500/70 border-red-500' : ''}`;
+        cell.title = `Reference Base #${i + 1}: ${base} (Codon #${Math.floor(i / 3) + 1})`;
+        cell.textContent = base;
+        refRow.appendChild(cell);
+      }
+      wrapper.appendChild(refRow);
+
+      // Indicator / Mismatch flag row
+      const diffRow = document.createElement('div');
+      diffRow.className = 'flex items-center gap-1 py-0.5 select-none';
+      const diffLabel = document.createElement('div');
+      diffLabel.className = 'w-24 text-right pr-3 font-mono text-[10px] text-slate-500';
+      diffLabel.textContent = 'DELTA';
+      diffRow.appendChild(diffLabel);
+
+      for (let i = 0; i < maxLen; i++) {
+        const isMismatch = mismatchMap.has(i);
+        const isMissing = !refRaw[i] || !mutRaw[i];
+        const indicator = document.createElement('div');
+        indicator.className = 'w-7 flex items-center justify-center text-[11px] font-mono';
+        
+        if (isMismatch || isMissing) {
+          indicator.innerHTML = '<span class="text-rose-500 font-extrabold animate-bounce">▲</span>';
+        } else {
+          indicator.innerHTML = '<span class="text-slate-800 text-[9px]">|</span>';
+        }
+        diffRow.appendChild(indicator);
+      }
+      wrapper.appendChild(diffRow);
+
+      // Mutated Sample row
+      const mutRow = document.createElement('div');
+      mutRow.className = 'flex items-center gap-1';
+      const mutLabel = document.createElement('div');
+      mutLabel.className = 'w-24 text-right pr-3 font-mono text-xs font-bold text-rose-400 flex items-center justify-end gap-1';
+      mutLabel.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> MUT 3'`;
+      mutRow.appendChild(mutLabel);
+
+      for (let i = 0; i < maxLen; i++) {
+        const base = mutRaw[i] || '-';
+        const isMismatch = mismatchMap.has(i);
+        const cell = document.createElement('div');
+        cell.id = `base-mut-${i}`;
+        const mismatchClass = isMismatch ? 'ring-2 ring-red-500 border-red-500 shadow-md shadow-red-950 text-white font-extrabold animate-glow-red' : '';
+        cell.className = `w-7 h-8 rounded flex items-center justify-center font-mono text-xs font-bold border base-box ${getBaseColorClass(base)} ${mismatchClass}`;
+        cell.title = `Patient Base #${i + 1}: ${base} (Codon #${Math.floor(i / 3) + 1})`;
+        cell.textContent = base;
+        mutRow.appendChild(cell);
+      }
+      wrapper.appendChild(mutRow);
+
+      // Codon grouping bracket bar
+      const codonRow = document.createElement('div');
+      codonRow.className = 'flex items-center gap-1 pt-1 pl-24 select-none';
+      for (let i = 0; i < maxLen; i += 3) {
+        const codonNum = (i / 3) + 1;
+        const codonSpan = document.createElement('div');
+        // width equals 3 * w-7 (28px) + 2 * gap (4px) = 84 + 8 = 92px
+        codonSpan.className = 'w-[92px] text-center border-t border-slate-700/80 pt-0.5 text-[9px] font-mono text-slate-400 truncate';
+        codonSpan.textContent = `Codon ${codonNum}`;
+        codonRow.appendChild(codonSpan);
+      }
+      wrapper.appendChild(codonRow);
+
+      alignmentContainer.appendChild(wrapper);
+    }
+
+    function renderProteinTranslation(refPeptides, mutPeptides, mismatches, isLengthDiff) {
+      refProteinView.innerHTML = '';
+      mutProteinView.innerHTML = '';
+
+      refProteinCount.textContent = `${refPeptides.length} residues`;
+      mutProteinCount.textContent = `${mutPeptides.length} residues`;
+
+      // Render Reference Peptides
+      refPeptides.forEach(p => {
+        const badge = document.createElement('div');
+        badge.className = `px-2 py-1 rounded-md text-[11px] border flex items-center gap-1 font-mono transition-transform hover:scale-105 ${getResidueColorClass(p.prop, false)}`;
+        badge.innerHTML = `<span class="font-bold">${p.aa}</span><span class="text-[9px] opacity-70">#${p.index}</span>`;
+        badge.title = `${p.name} (Codon: ${p.codon})`;
+        refProteinView.appendChild(badge);
+      });
+
+      // Render Mutated Peptides
+      let alteredCount = 0;
+      mutPeptides.forEach((p, idx) => {
+        const refP = refPeptides[idx];
+        const isAltered = !refP || refP.aa !== p.aa || isLengthDiff;
+        if (isAltered) alteredCount++;
+
+        const badge = document.createElement('div');
+        badge.className = `px-2 py-1 rounded-md text-[11px] border flex items-center gap-1 font-mono transition-transform hover:scale-105 ${getResidueColorClass(p.prop, isAltered)}`;
+        badge.innerHTML = `<span class="font-bold">${p.aa}</span><span class="text-[9px] opacity-70">#${p.index}</span>`;
+        badge.title = `${p.name} (Codon: ${p.codon})${isAltered ? ' [MUTATED]' : ''}`;
+        mutProteinView.appendChild(badge);
+      });
+
+      if (alteredCount === 0) {
+        proteinDeltaStatus.textContent = 'Peptides 100% Identical';
+        proteinDeltaStatus.className = 'text-emerald-400 font-semibold';
+      } else {
+        proteinDeltaStatus.textContent = `${alteredCount} Residue(s) Altered`;
+        proteinDeltaStatus.className = 'text-rose-400 font-semibold';
+      }
+    }
+
+    function renderClinicalInsights(refRaw, mutRaw, mismatches, isLengthDiff, refPeptides, mutPeptides) {
+      // Check against known cancer gene presets or compute dynamic pathology
+      let matchedPreset = null;
+
+      // Identify preset match by sequence exactness or key hotspot signature
+      Object.keys(PRESETS).forEach(key => {
+        const p = PRESETS[key];
+        if (refRaw === p.ref && mutRaw === p.mut) {
+          matchedPreset = p;
+        }
+      });
+
+      if (matchedPreset) {
+        // Direct high-confidence match to database hotspot
+        kpiRiskScore.textContent = matchedPreset.threat;
+        kpiRiskScore.className = `text-sm font-black uppercase text-${matchedPreset.threatColor}-400`;
+        kpiRiskCard.className = `bg-slate-900/90 border border-${matchedPreset.threatColor}-800/80 rounded-xl p-4 shadow-md flex flex-col justify-between`;
+        kpiGeneMatch.textContent = `${matchedPreset.gene} Hotspot: ${matchedPreset.mutationNote}`;
+
+        riskBadgeHeader.textContent = matchedPreset.threat;
+        riskBadgeHeader.className = `self-start sm:self-auto px-3.5 py-1.5 rounded-full text-xs font-bold font-mono tracking-wide bg-${matchedPreset.threatColor}-950 text-${matchedPreset.threatColor}-300 border border-${matchedPreset.threatColor}-800`;
+
+        insightPathway.textContent = matchedPreset.pathway;
+        insightTumorTypes.textContent = matchedPreset.tumors;
+        insightTherapy.textContent = matchedPreset.therapy;
+        return;
+      }
+
+      // Dynamic rule-based assessment for custom user sequences
+      if (isLengthDiff) {
+        kpiRiskScore.textContent = 'HIGH RISK (FRAMESHIFT)';
+        kpiRiskScore.className = 'text-sm font-black uppercase text-purple-400';
+        kpiRiskCard.className = 'bg-slate-900/90 border border-purple-800 rounded-xl p-4 shadow-md flex flex-col justify-between';
+        kpiGeneMatch.textContent = 'Deleterious Indel Shift';
+
+        riskBadgeHeader.textContent = 'HIGH RISK (FRAMESHIFT DELETERIOUS)';
+        riskBadgeHeader.className = 'self-start sm:self-auto px-3.5 py-1.5 rounded-full text-xs font-bold font-mono tracking-wide bg-purple-950 text-purple-300 border border-purple-800';
+
+        insightPathway.textContent = 'Insertion or Deletion disrupts reading triplet synchronicity downstream. Results in completely aberrant amino acid sequence and typical premature nonsense decay, producing non-functional truncated protein products.';
+        insightTumorTypes.textContent = 'Frequently observed in tumor suppressor loss-of-function phenotypes (e.g. BRCA1/2, PTEN, APC, VHL, CDH1).';
+        insightTherapy.textContent = 'Evaluate potential homologous recombination deficiency (HRD) markers or microsatellite instability (MSI-H) pathways if repair machinery is compromised.';
+        return;
+      }
+
+      if (mismatches.length === 0) {
+        kpiRiskScore.textContent = 'NORMAL / HOMOLOGOUS';
+        kpiRiskScore.className = 'text-sm font-black uppercase text-emerald-400';
+        kpiRiskCard.className = 'bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-md flex flex-col justify-between';
+        kpiGeneMatch.textContent = 'Germline Homology';
+
+        riskBadgeHeader.textContent = 'NO PATHOGENIC MUTATION DETECTED';
+        riskBadgeHeader.className = 'self-start sm:self-auto px-3.5 py-1.5 rounded-full text-xs font-bold font-mono tracking-wide bg-emerald-950 text-emerald-300 border border-emerald-800';
+
+        insightPathway.textContent = 'No nucleotide mismatches detected. Downstream transcription and peptide translation follow wild-type regulatory kinetics.';
+        insightTumorTypes.textContent = 'Baseline germline reference. No oncogenic drive identified in this targeted sequence window.';
+        insightTherapy.textContent = 'Standard wild-type baseline parameters apply. No mutation-specific kinase inhibitors warranted for this locus.';
+        return;
+      }
+
+      // Point mutations found: Missense vs Nonsense vs Silent
+      const hasNonsense = mutPeptides.some((p, idx) => p.aa === 'Stop' && refPeptides[idx] && refPeptides[idx].aa !== 'Stop');
+      const hasMissense = mutPeptides.some((p, idx) => refPeptides[idx] && refPeptides[idx].aa !== p.aa);
+
+      if (hasNonsense) {
+        kpiRiskScore.textContent = 'HIGH RISK (NONSENSE STOP)';
+        kpiRiskScore.className = 'text-sm font-black uppercase text-rose-500';
+        kpiRiskCard.className = 'bg-slate-900/90 border border-rose-800 rounded-xl p-4 shadow-md flex flex-col justify-between';
+        kpiGeneMatch.textContent = 'Premature Termination Locus';
+
+        riskBadgeHeader.textContent = 'HIGH RISK (PROTEIN TRUNCATION)';
+        riskBadgeHeader.className = 'self-start sm:self-auto px-3.5 py-1.5 rounded-full text-xs font-bold font-mono tracking-wide bg-rose-950 text-rose-300 border border-rose-800';
+
+        insightPathway.textContent = 'Premature stop codon triggers Nonsense-Mediated mRNA Decay (NMD) or yields a truncated, unstable polypeptide lacking critical regulatory or catalytic C-terminal domains.';
+        insightTumorTypes.textContent = 'Characteristic mechanism of tumor suppressor gene inactivation (e.g. TP53, RB1, NF1, APC).';
+        insightTherapy.textContent = 'Loss-of-function mutations often require downstream pathway targeting or synthetic lethality approaches rather than direct receptor inhibition.';
+      } else if (hasMissense) {
+        kpiRiskScore.textContent = 'POTENTIALLY PATHOGENIC';
+        kpiRiskScore.className = 'text-sm font-black uppercase text-amber-400';
+        kpiRiskCard.className = 'bg-slate-900/90 border border-amber-800 rounded-xl p-4 shadow-md flex flex-col justify-between';
+        kpiGeneMatch.textContent = 'Missense Non-Synonymous Change';
+
+        riskBadgeHeader.textContent = 'MISSENSE ALTERATION DETECTED';
+        riskBadgeHeader.className = 'self-start sm:self-auto px-3.5 py-1.5 rounded-full text-xs font-bold font-mono tracking-wide bg-amber-950 text-amber-300 border border-amber-800';
+
+        insightPathway.textContent = 'Altered amino acid residue may change local polarity, electrostatic charge, or protein folding conformation, potentially impacting receptor dimerization or substrate binding affinity.';
+        insightTumorTypes.textContent = 'Requires computational in silico modeling (SIFT, PolyPhen-2, AlphaFold) or COSMIC registry cross-referencing to determine driver vs passenger status.';
+        insightTherapy.textContent = 'Investigate whether altered residue falls within known kinase ATP-binding pockets or allosteric drug-interaction interfaces.';
+      } else {
+        kpiRiskScore.textContent = 'BENIGN / SILENT';
+        kpiRiskScore.className = 'text-sm font-black uppercase text-emerald-400';
+        kpiRiskCard.className = 'bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-md flex flex-col justify-between';
+        kpiGeneMatch.textContent = 'Synonymous Polymorphism';
+
+        riskBadgeHeader.textContent = 'BENIGN SYNONYMOUS VARIANT';
+        riskBadgeHeader.className = 'self-start sm:self-auto px-3.5 py-1.5 rounded-full text-xs font-bold font-mono tracking-wide bg-emerald-950 text-emerald-300 border border-emerald-800';
+
+        insightPathway.textContent = 'Degenerate codon alteration encodes identical amino acid residue. Primary protein sequence, quaternary assembly, and signal transduction proceed normally.';
+        insightTumorTypes.textContent = 'Typical benign single nucleotide variant (SNV) or population polymorphism without neoplastic driving capacity.';
+        insightTherapy.textContent = 'No targeted antineoplastic therapy warranted. Continue routine protocol surveillance.';
+      }
+    }
+
+    document.getElementById('jumpFirstMutBtn').addEventListener('click', () => {
+      const firstMutCell = document.querySelector('[id^="base-mut-"].ring-2') || document.querySelector('[id^="base-mut-"].border-red-500');
+      if (firstMutCell) {
+        firstMutCell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        firstMutCell.classList.add('scale-125');
+        setTimeout(() => firstMutCell.classList.remove('scale-125'), 1200);
+      } else {
+        alignmentContainer.scrollTo({ left: 0, behavior: 'smooth' });
+      }
+    });
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const presetKey = btn.getAttribute('data-preset');
+        const data = PRESETS[presetKey];
+        if (data) {
+          refSeqInput.value = data.ref;
+          mutSeqInput.value = data.mut;
+          analyzeSequences();
+
+          // Highlight selected preset visually
+          document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('ring-2', 'ring-cyan-400', 'bg-slate-700'));
+          btn.classList.add('ring-2', 'ring-cyan-400', 'bg-slate-700');
+        }
+      });
+    });
+
+    // Real-time analysis on typing
+    refSeqInput.addEventListener('input', analyzeSequences);
+    mutSeqInput.addEventListener('input', analyzeSequences);
+
+    // Sanitize button handlers
+    document.getElementById('cleanRefBtn').addEventListener('click', () => {
+      refSeqInput.value = sanitizeDNA(refSeqInput.value);
+      analyzeSequences();
+    });
+    document.getElementById('cleanMutBtn').addEventListener('click', () => {
+      mutSeqInput.value = sanitizeDNA(mutSeqInput.value);
+      analyzeSequences();
+    });
+
+    // Reverse complement handlers
+    document.getElementById('rcRefBtn').addEventListener('click', () => {
+      refSeqInput.value = reverseComplement(sanitizeDNA(refSeqInput.value));
+      analyzeSequences();
+    });
+    document.getElementById('rcMutBtn').addEventListener('click', () => {
+      mutSeqInput.value = reverseComplement(sanitizeDNA(mutSeqInput.value));
+      analyzeSequences();
+    });
+
+    // Clear handlers
+    document.getElementById('clearRefBtn').addEventListener('click', () => {
+      refSeqInput.value = '';
+      analyzeSequences();
+    });
+    document.getElementById('clearMutBtn').addEventListener('click', () => {
+      mutSeqInput.value = '';
+      analyzeSequences();
+    });
+
+    // Quick Re-Analyze button
+    document.getElementById('quickAnalyzeBtn').addEventListener('click', analyzeSequences);
+
+    window.addEventListener('DOMContentLoaded', () => {
+      // Load KRAS G12V by default for immediate visual feedback
+      const krasPreset = PRESETS.kras;
+      refSeqInput.value = krasPreset.ref;
+      mutSeqInput.value = krasPreset.mut;
+      const initialBtn = document.querySelector('[data-preset="kras"]');
+      if (initialBtn) initialBtn.classList.add('ring-2', 'ring-cyan-400', 'bg-slate-700');
+      analyzeSequences();
+    });
+  </script>
+</body>
+</html>
